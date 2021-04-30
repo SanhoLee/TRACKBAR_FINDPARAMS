@@ -15,9 +15,9 @@ int main(int argc, char **argv)
     char imgOutPath[256];
 
     char srcDir[100];
-    char hlsOutDir[100];
+    char OutDir[100];
 
-    Mat img, imgHLS, imgMasked;
+    Mat imgMasked, imgBlur, imgCanny;
     int rtnKey = 0;
 
     memset(curPath, 0, sizeof(curPath));
@@ -41,56 +41,48 @@ int main(int argc, char **argv)
         memset(imgReadPath, 0, sizeof(imgReadPath));
         memset(imgOutPath, 0, sizeof(imgOutPath));
         memset(srcDir, 0, sizeof(srcDir));
-        memset(hlsOutDir, 0, sizeof(hlsOutDir));
+        memset(OutDir, 0, sizeof(OutDir));
 
         strcpy(srcDir, "/data/imgSRC/");
-        strcpy(hlsOutDir, HLS_outDIR);
+        strcpy(OutDir, CANNY_outDIR);
 
         makeTargetPath(curPath, srcDir, imgSrcPath);
-        makeTargetPath(curPath, hlsOutDir, imgOutPath);
+        makeTargetPath(curPath, OutDir, imgOutPath);
         makeTargetPath(imgSrcPath, argv[1], imgReadPath);
     }
 
     // create window.
-    namedWindow(HLS_TRACKBAR, WINDOW_NORMAL);
+    namedWindow(CANNY_TRACKBAR, WINDOW_NORMAL);
 
     // create new trackbar.
-    createTrackbar("hmin : ", HLS_TRACKBAR, &hmin, 179);
-    createTrackbar("lmin : ", HLS_TRACKBAR, &lmin, 255);
-    createTrackbar("smin : ", HLS_TRACKBAR, &smin, 255);
-    createTrackbar("hmax : ", HLS_TRACKBAR, &hmax, 179);
-    createTrackbar("lmax : ", HLS_TRACKBAR, &lmax, 255);
-    createTrackbar("smax : ", HLS_TRACKBAR, &smax, 255);
+    createTrackbar("lowThres : ", CANNY_TRACKBAR, &lowThres, 200);
+    createTrackbar("highThres : ", CANNY_TRACKBAR, &highThres, 200);
 
     while (true)
     {
-        // read origin img
-        img = imread(imgReadPath);
-        if (isImgEmpty(img, imgReadPath))
+        /* read origin img */
+        imgMasked = imread(imgReadPath);
+        if (isImgEmpty(imgMasked, imgReadPath))
         {
             return 0;
         }
 
-        // convert color space to HLS.
-        cvtColor(img, imgHLS, COLOR_BGR2HLS);
+        /* Blur img and Canny Edge function run. */
+        GaussianBlur(imgMasked, imgBlur, Size(kernelSize, kernelSize), kernelSize, kernelSize);
+        Canny(imgBlur, imgCanny, lowThres, highThres);
 
-        // masking img with specific color elements.
-        Scalar lowerb_(hmin, lmin, smin);
-        Scalar upperb_(hmax, lmax, smax);
-        inRange(imgHLS, lowerb_, upperb_, imgMasked);
+        /* show current masking color boundary. */
+        show_cannyEdgeValue(lowThres, highThres);
 
-        // show current masking color boundary.
-        show_HLSValue(hmin, lmin, smin, hmax, lmax, smax);
-
-        // show masked img.
-        imshow("imgMasked", imgMasked);
+        // show origin and cannyEdge img.
+        imshow("imgCanny", imgCanny);
         rtnKey = waitKey(1);
 
-        // save masked img when esc key is pressed.
+        /* save masked img when esc key is pressed. */
         if (rtnKey == 27)
         {
-            strcat(imgOutPath, HLS_OUTPUT);
-            imwrite(imgOutPath, imgMasked);
+            strcat(imgOutPath, CANNY_OUTPUT);
+            imwrite(imgOutPath, imgCanny);
             return 0;
         }
     }
